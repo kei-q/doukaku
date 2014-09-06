@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 module Solver where
 
 -- imports
@@ -7,10 +8,12 @@ import Data.List.Split
 import Control.Lens
 import Numeric.Lens
 import qualified Doukaku as D
+import Data.Maybe
+import Data.Tuple
 
 -- ghci用の値
 
-t = "ss6cc24S"
+t = "ab,gg,uj,pt,an,ir,rr"
 pt = parse t
 
 -- 定型句
@@ -25,7 +28,8 @@ parse :: String -> Input
 parse = splitOn ","
 
 format :: Output -> String
-format = id
+format "" = "none"
+format output = output
 
 -- main
 
@@ -36,41 +40,32 @@ initField :: Field
 initField = zip ['a'..] [(x,y)| x <- [1..5], y <- [1..5]]
 
 solve' :: Input -> Output
-solve' input = if ret == "" then "none" else ret
-  where
-    ret = sort . map fst . snd . foldl step (initField,[]) $ input
+solve' = sort . map fst . snd . foldl step (initField,[])
 
 step :: (Field,LastMoved) -> String -> (Field,LastMoved)
-step (field,_) [c,d] = (field',pts')
+step (field,_) input = (field',pts')
   where
     field' = (field \\ pts) ++ pts'
-    pts = targets field l t r b
-    pts' = rotate (targets field l t r b)
-    (Just (y1,x1)) = lookup c field
-    (Just (y2,x2)) = lookup d field
-    l = min x1 x2
-    t = min y1 y2
-    r = max x1 x2
-    b = max y1 y2
+    pts = targets field (ltrb field input)
+    pts' = rotate pts
 
-targets field l t r b = go (points (l,t,r,b))
+ltrb field [c1,c2] = (min x1 x2, min y1 y2, max x1 x2, max y1 y2)
+  where
+    (Just (y1,x1)) = lookup c1 field
+    (Just (y2,x2)) = lookup c2 field
+
+targets field = mapMaybe go . points
   where
     field' = map swap field
-    go [] = []
-    go (pt:pts) = case lookup pt field' of
-      Just a -> (a,pt) : go pts
-      Nothing -> go pts
-    swap (a,b) = (b,a)
+    go pt = fmap (,pt) $ lookup pt field'
 
 rotate ts = zip cs pts'
   where
-    cs = map fst ts
-    pts = map snd ts
+    (cs,pts) = unzip ts
     pts' = if null pts then pts else tail pts ++ [head pts]
 
---points :: (Int,Int,Int,Int) -> [(Int,Int)]
+points :: (Int,Int,Int,Int) -> [(Int,Int)]
 points (l,t,r,b) = nub $ concat [ls,ts,rs,bs]
---points (l,t,r,b) = [ls,ts,rs,bs]
   where
     ls = reverse $ sort [(y,l-1)| y <- [t-1..b+1]]
     ts = sort [(t-1,x)| x <- [l-1..r+1]]
