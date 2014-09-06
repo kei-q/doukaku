@@ -1,0 +1,11 @@
+# A sample Guardfile
+# More info at https://github.com/guard/guard#readme
+#
+
+guard :shell do
+  watch "Solver.hs" do
+    system 'clear'
+    system('runghc Spec.hs')
+  end
+end
+
