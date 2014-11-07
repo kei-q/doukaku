@@ -20,10 +20,9 @@ format = intercalate ","
 -- main
 
 solve' :: Input -> Output
-solve' stops = case concatMap f "123" of
-    [] -> ["-"]
-    list -> list
+solve' stops = if result == [] then ["-"] else result
   where
+    result = concatMap f "123"
     f p = makePair p . cleaning . findDeadEnd rmap $ p
     rmap = enableRailMap stops
 
@@ -35,11 +34,8 @@ cleaning = filter (`elem` "456") . nub . sort
 
 findDeadEnd :: RailMap -> Pos -> [Pos]
 findDeadEnd rmap p
-  | Just poss <- findNext rmap p = concatMap (findDeadEnd rmap) poss
+  | Just poss <- lookup p rmap = concatMap (findDeadEnd rmap) poss
   | otherwise = [p]
-
-findNext :: RailMap -> Pos -> Maybe [Pos]
-findNext rmap p = lookup p rmap
 
 type RailMap = [(Char,String)]
 
