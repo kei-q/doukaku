@@ -1,603 +1,12 @@
-//
-//  Array.swift
-//  ExSwift
-//
-//  Created by pNre on 03/06/14.
-//  Copyright (c) 2014 pNre. All rights reserved.
-//
-
-import Foundation
-
-public extension Array {
-    
-    /**
-    *  Checks if self contains all the items
-    *  @param item The items to search for
-    *  @return true if self contains all the items
-    */
-    func contains <T: Equatable> (items: T...) -> Bool {
-        return items.all { self.indexOf($0) >= 0 }
-    }
-    
-    /**
-    *  Difference of self and the input arrays
-    *  @param values Arrays to subtract
-    *  @return Difference of self and the input arrays
-    */
-    func difference <T: Equatable> (values: Array<T>...) -> Array<T> {
-        
-        var result = Array<T>()
-        
-        elements: for e in self {
-            if let element = e as? T {
-                for value in values {
-                    //  if a value is in both self and one of the values arrays
-                    //  jump to the next iteration of the outer loop
-                    if value.contains(element) {
-                        continue elements
-                    }
-                }
-                
-                //  element it's only in self
-                result.append(element)
-            }
-        }
-        
-        return result
-        
-    }
-    
-    /**
-    *  Intersection of self and the input arrays
-    *  @param values Arrays to intersect
-    *  @return Array of unique values present in all the values arrays + self
-    */
-    func intersection <U: Equatable> (values: Array<U>...) -> Array {
-        
-        var result = self
-        var intersection = Array()
-        
-        for (i, value) in enumerate(values) {
-            
-            //  the intersection is computed by intersecting a couple per loop:
-            //  self n values[0], (self n values[0]) n values[1], ...
-            if (i > 0) {
-                result = intersection
-                intersection = Array()
-            }
-            
-            //  find common elements and save them in first set
-            //  to intersect in the next loop
-            value.each { (item: U) -> Void in
-                if result.contains(item) {
-                    intersection.append(item as Element)
-                }
-            }
-            
-        }
-        
-        return intersection
-        
-    }
-    
-    /**
-    *  Union of self and the input arrays
-    *  @param values Arrays
-    *  @return Union array of unique values
-    */
-    func union <U: Equatable> (values: Array<U>...) -> Array {
-        
-        var result = self
-        
-        for array in values {
-            for value in array {
-                if !result.contains(value) {
-                    result.append(value as Element)
-                }
-            }
-        }
-        
-        return result
-        
-    }
-    
-    /**
-    *  First element of the array
-    *  @return First element of the array if present
-    */
-    func first () -> Element? {
-        if count > 0 {
-            return self[0]
-        }
-        return nil
-    }
-    
-    /**
-    *  Last element of the array
-    *  @return Last element of the array if present
-    */
-    func last () -> Element? {
-        if count > 0 {
-            return self[count - 1]
-        }
-        return nil
-    }
-    
-    /**
-    *  Index of the first occurrence of item, if found
-    *  @param item The item to search for
-    *  @return Index of the matched item or nil
-    */
-    func indexOf <U: Equatable> (item: U) -> Int? {
-        if item is Element {
-            if let found = find(reinterpretCast(self) as Array<U>, item) {
-                return found
-            }
-            
-            return nil
-        }
-        
-        return nil
-    }
-    
-    /**
-    *  Gets the index of the last occurrence of item, if found
-    *  @param item The item to search for
-    *  @return Index of the matched item or nil
-    */
-    func lastIndexOf <U: Equatable> (item: U) -> Int? {
-        if item is Element {
-            if let index = reverse().indexOf(item) {
-                return count - index - 1
-            }
-            
-            return nil
-        }
-        
-        return nil
-    }
-    
-    /**
-    *  Object at the specified index if exists
-    *  @param index
-    *  @return Object at index in array, nil if index is out of bounds
-    */
-    func get (index: Int) -> Element? {
-        
-        //  Fixes out of bounds values integers
-        func relativeIndex (index: Int) -> Int {
-            var _index = (index % count)
-            
-            if _index < 0 {
-                _index = count + _index
-            }
-            
-            return _index
-        }
-        
-        let _index = relativeIndex(index)
-        return _index < count ? self[_index] : nil
-    }
-    
-    /**
-    *  Array of grouped elements, the first of which contains the first elements
-    *  of the given arrays, the 2nd contains the 2nd elements of the given arrays, and so on
-    *  @param arrays Arrays to zip
-    *  @return Array of grouped elements
-    */
-    func zip (arrays: Array<Any>...) -> Array<Array<Any?>> {
-        
-        var result = Array<Array<Any?>>()
-        
-        //  Gets the longest array
-        let max = arrays.map { (array: Array<Any>) -> Int in
-            return array.count
-            }.max() as Int
-        
-        for i in 0..<max {
-            
-            //  i-th element in self as array + every i-th element in each array in arrays
-            result.append([get(i)] + arrays.map {
-                (array: Array<Any>) -> Any? in return array.get(i)
-                })
-            
-        }
-        
-        return result
-    }
-    
-    /**
-    *  Applies cond to each element in array, splitting it each time cond returns a new value.
-    *  @param cond Function which takes an element and produces an equatable result.
-    *  @return Array partitioned in order, splitting via results of cond.
-    */
-    func partitionBy <T: Equatable> (cond: (Element) -> T) -> Array<Array> {
-        var result = Array<Array>()
-        var lastValue: T? = nil
-        
-        for item in self {
-            let value = cond(item)
-            
-            if value == lastValue? {
-                result[result.count - 1] += item
-            } else {
-                result.append([item])
-                lastValue = value
-            }
-        }
-        
-        return result
-    }
-    
-    /**
-    *  Max value in the current array (if applicable)
-    *  @return Max value
-    */
-    func max <U: Comparable> () -> U {
-        
-        return maxElement(map {
-            return $0 as U
-            })
-        
-    }
-    
-    /**
-    *  Min value in the current array (if applicable)
-    *  @return Min value
-    */
-    func min <U: Comparable> () -> U {
-        
-        return minElement(map {
-            return $0 as U
-            })
-        
-    }
-    
-    /**
-    *  Iterates on each element
-    *  @param call Function to call for each element
-    */
-    func each (call: (Element) -> ()) {
-        
-        for item in self {
-            call(item)
-        }
-        
-    }
-    
-    /**
-    *  Iterates on each element with its index
-    *  @param call Function to call for each element
-    */
-    func each (call: (Int, Element) -> ()) {
-        
-        for (index, item) in enumerate(self) {
-            call(index, item)
-        }
-        
-    }
-    
-    /**
-    *  Same as each, from Right to Left
-    *  @param call Function to call for each element
-    */
-    func eachRight (call: (Element) -> ()) {
-        self.reverse().each(call)
-    }
-    
-    /**
-    *  Same as each (with index), from Right to Left
-    *  @param call Function to call for each element
-    */
-    func eachRight (call: (Int, Element) -> ()) {
-        for (index, item) in enumerate(self.reverse()) {
-            call(count - index - 1, item)
-        }
-    }
-    
-    /**
-    *  Checks if call returns true for any element of self
-    *  @param call Function to call for each element
-    *  @return True if call returns true for any element of self
-    */
-    func any (call: (Element) -> Bool) -> Bool {
-        for item in self {
-            if call(item) {
-                return true
-            }
-        }
-        
-        return false
-    }
-    
-    /**
-    *  Checks if call returns true for all the elements in self
-    *  @param call Function to call for each element
-    *  @return True if call returns true for all the elements in self
-    */
-    func all (call: (Element) -> Bool) -> Bool {
-        for item in self {
-            if !call(item) {
-                return false
-            }
-        }
-        
-        return true
-    }
-    
-    /**
-    *  Opposite of filter
-    *  @param exclude Function invoked to test elements from the exclusion from the array
-    *  @return Filtered array
-    */
-    func reject (exclude: (Element -> Bool)) -> Array {
-        return filter {
-            return !exclude($0)
-        }
-    }
-    
-    
-    /**
-    *  Returns the first element in the array to meet the condition
-    *  @param condition A function which returns a boolean if an element satisfies a given condition or not.
-    *  @return The first element in the array to meet the condition
-    */
-    func takeFirst (condition: (Element) -> Bool) -> Element? {
-        
-        for value in self {
-            if condition(value) {
-                return value
-            }
-        }
-        
-        return nil
-        
-    }
-    
-    /**
-    *  New array obtanined by removing the duplicate values (if applicable)
-    *  @return Unique array
-    */
-    func unique <T: Equatable> () -> Array<T> {
-        var result = Array<T>()
-        
-        for item in self {
-            if !result.contains(item as T) {
-                result.append(item as T)
-            }
-        }
-        
-        return result
-    }
-    
-    /**
-    *  Creates a dictionary composed of keys generated from the results of
-    *  running each element of self through groupingFunction. The corresponding
-    *  value of each key is an array of the elements responsible for generating the key.
-    *  @param groupingFunction
-    *  @return Grouped dictionary
-    */
-    func groupBy <U> (groupingFunction group: (Element) -> U) -> Dictionary<U, Array> {
-        
-        var result = Dictionary<U, Array>()
-        
-        for item in self {
-            
-            let groupKey = group(item)
-            
-            // If element has already been added to dictionary, append to it. If not, create one.
-            if let elem = result[groupKey] {
-                result[groupKey] = elem + [item]
-            } else {
-                result[groupKey] = [item]
-            }
-        }
-        
-        return result
-    }
-    
-    /**
-    *  Similar to groupBy, but instead of returning a list of values,
-    *  returns the number of values for each group
-    *  @param groupingFunction
-    *  @return Grouped dictionary
-    */
-    func countBy <U> (groupingFunction group: (Element) -> U) -> Dictionary<U, Int> {
-        
-        var result = Dictionary<U, Int>()
-        
-        for item in self {
-            let groupKey = group(item)
-            
-            if let elem = result[groupKey] {
-                result[groupKey] = elem + 1
-            } else {
-                result[groupKey] = 1
-            }
-        }
-        
-        return result
-    }
-    
-    /**
-    *  Joins the array elements with a separator
-    *  @param separator
-    *  @return Joined object if self is not empty
-    *          and its elements are instances of C, nil otherwise
-    */
-    func implode <C: ExtensibleCollection> (separator: C) -> C? {
-        if Element.self is C.Type {
-            return Swift.join(separator, reinterpretCast(self) as Array<C>)
-        }
-        
-        return nil
-    }
-    
-    /**
-    *  self.reduce from right to left
-    */
-    func reduceRight <U> (initial: U, combine: (U, Element) -> U) -> U {
-        return reverse().reduce(initial, combine: combine)
-    }
-    
-    
-    /**
-    *  Creates an array with the elements at the specified indexes
-    *  @param indexes Indexes of the elements to get
-    *  @return Array with the elements at indexes
-    */
-    func at (indexes: Int...) -> Array {
-        return indexes.map { self.get($0)! }
-    }
-    
-    /**
-    *  Converts the array to a dictionary with the keys supplied via the keySelector
-    *  @param keySelector
-    *  @return A dictionary
-    */
-    func toDictionary <U> (keySelector:(Element) -> U) -> Dictionary<U, Element> {
-        var result: Dictionary<U, Element> = [:]
-        for item in self {
-            let key = keySelector(item)
-            result[key] = item
-        }
-        return result
-    }
-    
-    /**
-    *  Sorts the array by the given comparison function
-    *  @param isOrderedBefore
-    *  @return An array that is sorted by the given function
-    */
-    func sortBy (isOrderedBefore: (T, T) -> Bool) -> Array<T> {
-        return sorted(isOrderedBefore)
-    }
-    
-    /**
-    *  Removes the last element from self and returns it
-    *  @return The removed element
-    */
-    mutating func pop () -> Element {
-        return self.removeLast()
-    }
-    
-    /**
-    *  Same as append
-    *  @param newElement Element to append
-    */
-    mutating func push (newElement: Element) {
-        return self.append(newElement)
-    }
-    
-    /**
-    *  Returns the first element of self and removes it
-    *  @return The removed element
-    */
-    mutating func shift () -> Element {
-        return self.removeAtIndex(0)
-    }
-    
-    /**
-    *  Prepends objects to the front of self
-    */
-    mutating func unshift (newElement: Element) {
-        self.insert(newElement, atIndex: 0)
-    }
-    
-    /**
-    *  Deletes all the items in self that are equal to element
-    *  @param element Element to remove
-    */
-    mutating func remove <U: Equatable> (element: U) {
-        let anotherSelf = self
-        
-        removeAll(keepCapacity: true)
-        
-        anotherSelf.each {
-            (index: Int, current: Element) in
-            if current as U != element {
-                self.append(current)
-            }
-        }
-    }
-    
-    /**
-    *  Constructs an array containing the integers in the given range
-    *  @param range
-    *  @return Array of integers
-    */
-    static func range <U: ForwardIndex> (range: Range<U>) -> Array<U> {
-        return Array<U>(range)
-    }
-    
-    /**
-    *  Same as `at`
-    *  @param first First index
-    *  @param second Second index
-    *  @param rest Rest of indexes
-    *  @return Array with the items at the specified indexes
-    *  @note It's a 2 + n params function to prevent conflicts with
-    *  the default array subscript function
-    */
-    subscript (first: Int, second: Int, rest: Int...) -> Array {
-        return at(reinterpretCast([first, second] + rest))
-    }
-    
-}
-
-/**
-*  Remove and element from the array
-*/
-@infix public func - <T: Equatable> (first: Array<T>, second: T) -> Array<T> {
-    return first - [second]
-}
-
-/**
-*  Shorthand for the difference
-*/
-@infix public func - <T: Equatable> (first: Array<T>, second: Array<T>) -> Array<T> {
-    return first.difference(second)
-}
-
-/**
-*  Shorthand for the intersection
-*/
-@infix public func & <T: Equatable> (first: Array<T>, second: Array<T>) -> Array<T> {
-    return first.intersection(second)
-}
-
-/**
-*  Shorthand for the union
-*/
-@infix public func | <T: Equatable> (first: Array<T>, second: Array<T>) -> Array<T> {
-    return first.union(second)
-}
-
-/**
-*  Array items concatenation à la Ruby
-*  @param array Array of Strings to join
-*  @param separator Separator to join the array elements
-*  @return Joined string
-*/
-@infix public func * (array: Array<String>, separator: String) -> String {
-    return array.implode(separator)!
-}
 
 
 ////////////////////////////////////////////////////////////////////////////////
 
 func parse(input:String) -> [[Int]] {
-    let cells = input.componentsSeparatedByString("/")
-    let field = cells.map {
-        (s:String) -> [Int] in
-        var a:[Int] = []
-        for c in s {
-            a += String(c).toInt()!
-        }
-        return a
+    let cells = split(input, {"/" == $0})
+    return cells.map { s -> [Int] in
+        map(s, { "\($0)".toInt()! })
     }
-    // return [[0,1,2,2,4],[8,2,9,2,5],[6,9,0,7,6],[3,2,2,9,8],[2,1,0,6,5]]
-    return field
 }
 
 func walk(field:[[Int]], x:Int, y:Int, n:Int) -> Int {
@@ -609,12 +18,12 @@ func walk(field:[[Int]], x:Int, y:Int, n:Int) -> Int {
     }
     
     let m = field[y][x]
-    let a = walk(field, x-1, y, m)
-    let b = walk(field, x+1, y, m)
-    let c = walk(field, x, y-1, m)
-    let d = walk(field, x, y+1, m)
-    
-    return 1 + [a,b,c,d].max()
+    return 1 + maxElement([
+        walk(field, x-1, y, m),
+        walk(field, x+1, y, m),
+        walk(field, x, y-1, m),
+        walk(field, x, y+1, m),
+    ])
 }
 
 func solve(input:String) -> String {
@@ -642,3 +51,53 @@ func test(input:String, expected:String) -> String {
 }
 
 /*0*/ test( "01224/82925/69076/32298/21065", "6" );
+/*1*/ test( "03478/12569/03478/12569/03478", "10" );
+/*2*/ test( "09900/28127/87036/76545/87650", "10" );
+/*3*/ test( "77777/77777/77777/77777/77777", "1" );
+/*4*/ test( "00000/11111/22222/33333/44444", "5" );
+/*5*/ test( "01234/12345/23456/34567/45678", "9" );
+/*6*/ test( "10135/21245/43456/55567/77789", "8" );
+/*7*/ test( "33333/33333/55555/55555/77777", "2" );
+/*8*/ test( "01234/11234/22234/33334/44444", "5" );
+/*9*/ test( "98765/88765/77765/66665/55555", "5" );
+/*10*/ test( "01234/10325/23016/32107/45670", "8" );
+/*11*/ test( "34343/43434/34343/43434/34343", "2" );
+/*12*/ test( "14714/41177/71141/17414/47141", "3" );
+/*13*/ test( "13891/31983/89138/98319/13891", "4" );
+/*14*/ test( "01369/36901/90136/13690/69013", "5" );
+/*15*/ test( "02468/24689/46898/68986/89864", "6" );
+/*16*/ test( "86420/68642/46864/24686/02468", "5" );
+/*17*/ test( "77777/75557/75357/75557/77777", "3" );
+/*18*/ test( "53135/33133/11111/33133/53135", "3" );
+/*19*/ test( "01356/23501/45024/61246/13461", "5" );
+/*20*/ test( "46803/68025/91358/34792/78136", "4" );
+/*21*/ test( "66788/56789/55799/43210/33211", "9" );
+/*22*/ test( "40000/94321/96433/97644/98654", "9" );
+/*23*/ test( "58950/01769/24524/24779/17069", "6" );
+/*24*/ test( "97691/01883/98736/51934/81403", "4" );
+/*25*/ test( "92049/27798/69377/45936/80277", "5" );
+/*26*/ test( "97308/77113/08645/62578/44774", "5" );
+/*27*/ test( "90207/17984/01982/31272/60926", "6" );
+/*28*/ test( "62770/65146/06512/15407/89570", "4" );
+/*29*/ test( "93914/46889/27554/58581/18703", "5" );
+/*30*/ test( "42035/12430/60728/30842/90381", "5" );
+/*31*/ test( "90347/53880/67954/95256/68777", "6" );
+/*32*/ test( "05986/60473/01606/16425/46292", "5" );
+/*33*/ test( "18053/90486/24320/04250/03853", "5" );
+/*34*/ test( "36865/13263/67280/18600/12774", "5" );
+/*35*/ test( "72456/72052/79971/14656/41151", "5" );
+/*36*/ test( "94888/28649/05561/76571/97567", "5" );
+/*37*/ test( "50214/94693/88718/78922/55359", "5" );
+/*38*/ test( "76502/99325/17987/31737/93874", "7" );
+/*39*/ test( "87142/14764/13014/00248/73105", "6" );
+/*40*/ test( "24573/71679/48704/19786/91834", "7" );
+/*41*/ test( "20347/61889/06074/61263/20519", "7" );
+/*42*/ test( "74344/97459/97302/14439/35689", "6" );
+/*43*/ test( "04794/52198/50294/09340/24160", "5" );
+/*44*/ test( "41065/69344/64698/54167/43348", "7" );
+/*45*/ test( "39947/15696/03482/19574/70235", "7" );
+/*46*/ test( "92767/16790/84897/69765/75734", "7" );
+/*47*/ test( "09654/79610/05070/23456/74687", "8" );
+/*48*/ test( "73998/98799/98707/05633/23915", "8" );
+/*49*/ test( "35661/17480/89723/64335/27217", "7" );
+/*50*/ test( "02489/77571/84873/03879/84460", "7" );
