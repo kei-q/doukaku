@@ -1,4 +1,3 @@
-// 最初にtestが全部通るまで49分
 
 import Foundation
 
