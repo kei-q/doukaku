@@ -25,7 +25,7 @@ import qualified TestData as TD
 main :: IO ()
 main = hspec $ do
   describe "doukaku" $ do
-    forM_ (zip [1..] TD.t) $ \(n, (input, expected)) -> do
+    forM_ (zip [0..] TD.t) $ \(n, (input, expected)) -> do
       it (show n) $ do
         solve  input `shouldBe` expected
 
